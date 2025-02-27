@@ -32,10 +32,11 @@ interface IManager {
     function removeManager(address _manager) external;
 }
 
-contract Manager is IManager {
+contract Manager is IManager, Ownable {
     mapping(address => bool) public managers;
 
-    constructor(address _manager) {
+    constructor(address _owner, address _manager) Ownable(_owner) {
+        managers[_owner] = true;
         managers[_manager] = true;
     }
 
@@ -44,13 +45,13 @@ contract Manager is IManager {
         _;
     }
 
-    function addManager(address _manager) external override onlyManager {
+    function addManager(address _manager) external override onlyOwner {
         require(!managers[_manager], "Manager already exists");
         require(_manager != address(0), "Invalid address");
         managers[_manager] = true;
     }
 
-    function removeManager(address _manager) external override onlyManager {
+    function removeManager(address _manager) external override onlyOwner {
         require(managers[_manager], "Manager does not exist");
         require(_manager != address(0), "Invalid address");
         managers[_manager] = false;
@@ -117,7 +118,7 @@ contract StakeV2 is Manager, ReentrancyGuard {
 
     /// @notice The constructor of the contract
     /// @param _stakingToken The staking token
-    constructor(IERC20 _stakingToken, IZapper _zapper, address owner, IWETH _wbera) Manager(owner) {
+    constructor(IERC20 _stakingToken, IZapper _zapper, address owner, address initialManager, IWETH _wbera) Manager(owner, initialManager) {
         stakingToken = _stakingToken;
         zapper = _zapper;
         wbera = _wbera;
