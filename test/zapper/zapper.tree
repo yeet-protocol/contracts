@@ -1,0 +1,139 @@
+To do -> 
+Zap in with enough of both tokens.
+Already doable. Document and test this.
+
+
+// Invariant Requires that token0 and token1 are already acquired from the msg.sender()
+_yeetIn
+.
+├── _approveAndAddLiquidityToKodiakVault
+└── updates token0Debt and token1Debt
+    ├── if token0 used > token0Debt (use of more than what user has)
+    │   └── reverts with arithmetic underflow
+    ├── if token1 used > token1Debt (use of more than what user has)
+    │   └── reverts with arithmetic underflow
+    └── if island tokens are minted to zapper
+        ├── _depositIntoVault
+        └── _clearUserDebt -> clears token0Debt and token1Debt, sends back to msg.sender
+
+_verifyTokenAndSwap
+.
+├── input token is not whitelisted
+│   └── reverts
+├── output token is not whitelisted
+│   └── reverts
+└── valid tokens
+    └── Calls _approveRouterAndSwap
+
+_approveRouterAndSwap
+.
+├── not enough balance
+│   └── Approval is unsuccessful while increasing allowance.
+└── enough balance
+    ├── increases allowance
+    └── swap is called on SwapRouter with correct Params
+        ├── successful swap
+        └── unsuccessful swap
+
+
+// Invariant Requires that token0 and token1 are already acquired from the msg.sender()
+_approveAndAddLiquidityToKodiakVault
+.
+├── kodiakVault is not whitelisted
+│   └── reverts
+└── kodiakVault is whitelisted
+    ├── previewDeposit is less than min shares(slippage check)
+    │   └── reverts with Zapper: insufficient shares minted
+    └── previewDeposit is greater than min shares(slippage check)
+        ├── Increases allowance of island tokens to vault and calls previewDeposit.
+        ├── Deposits tokens to Compounding vault with Vault Params [with the appropriate receiver]
+        └── If shares receiver is zapper, it sends vault shares to msgSender.   [Debt Clearing]
+
+// Invariant -> Should be Called only if vaultTokensMinted > 0 && receiver is zapper
+_depositIntoVault -> Called with vault params and minted kodiakVault tokens
+├── vault shares receiver = zero address
+│   └── reverts
+├── vault is not whitelisted
+│   └── reverts
+└── vault is whitelisted
+    ├── preview deposit is less than min shares(slippage check)
+    │   └── reverts with Zapper: insufficient shares minted
+    └── preview deposit is greater than min shares(slippage check)
+        ├── Increases allowance of island tokens to vault and calls previewDeposit.
+        ├── Deposits tokens to Compounding vault with Vault Params [with the appropriate receiver]
+        ├── If shares receiver is not zapper
+        │   └── Vault shares of receiver are increased
+        │   └── Vault shares of zapper remain unchanged
+        └── If shares receiver is zapper
+            └── it sends vault shares to msgSender.   [Debt Clearing]
+        │   └── Vault shares of zapper remain unchanged
+
+_clearUserDebt
+.
+├── token0Debt is not 0
+│   └── transfer debt amount to user
+└── token1Debt is not 0
+    └── transfer debt amount to user
+
+
+_yeetOut
+.
+├── withdraws from vault _withdrawFromVault is called.
+├── If islandTokens are sent to other addresses.
+│   └── return (0,0) as token0Debt and token1Debt
+│   └── No calls are made to the island contract(kodiak vault)
+└── If islandTokens are received by zapper
+    └── Calls _approveAndUnstakeFromKodiakVault with unstaking params and the islandTokens received
+        ├── if token0 and token1 are received by zapper
+        │   └── returns the appropriate token0Debt and token1Debt
+        └── if token0 and token1 are received by other addresses
+            └── returns (0,0) as token0Debt and token1Debt
+
+
+_withdrawFromVault
+.
+├── vault is not whitelisted || receiver is zero address
+│   └── reverts
+└── vault is whitelisted
+    ├── Zapper does not have approval to get vault shares
+    │   └── reverts with ERC20.InsufficientAllowance
+    ├── Msg sender does not have enough vault shares. Gets vault shares from the msgSender()
+    │   └── reverts
+    └── Sender has enough shares. Gets vault shares from the msgSender()
+        └── redeem is called on compounding vault with the params including receiver
+            ├── Slippage exceeded 
+            │   └── reverts with Zapper: insufficient assets received
+            └── Slippage not exceeded 
+                ├── receiver is zapper
+                │   └── returns the amount island tokens received by zapper
+                │   └── zapper island token balance increases
+                └── receiver is not zapper
+                    └── returns the amount island tokens received by user
+        
+
+// Invariant -> Should be called only after acquiring the island tokens
+_approveAndUnstakeFromKodiakVault
+.
+├── kodiakVault is not whitelisted || receiver is zero address
+│   └── reverts
+└── if params are valid
+    ├── removeLiquidity is called on stakingRouter with the params including receiver [unstake from kodiakVault using the router]
+    ├── updates vaultTokenDebt -= _liquidityBurned from removeLiquidity
+    ├── if vaultTokenDebt > 0
+    │   └── transfer remaining vaultTokenDebt amount to receiver from kodiakVault
+    └── returns the amount of token0 and token1 received by user.
+
+
+
+_performMultiSwaps
+
+_swapNativeToTokens
+
+_swapToWBERA
+
+
+
+
+
+
+

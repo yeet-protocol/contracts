@@ -1,0 +1,13 @@
+{
+  "name": "yeet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2",
+    "@pythnetwork/entropy-sdk-solidity": "^1.3.0",
+    "@kodiak-finance/v3-core": "^1.1.0"
+  }
+}

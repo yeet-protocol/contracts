@@ -1,0 +1,175 @@
+
+// Basic ERC 4626 tests.
+
+// Modifications to the original ERC 4626 tests:
+
+totalAssets
+# returns locked token amount at target farm plugin.balanceOf(address(this))
+
+deposit() -> Deposits asset into the underlying target farm.
+├── If target farm plugin is not set
+│   └── revert
+├── If target farm plugin is set
+|   ├── If user has insufficient balance
+|   │   └── revert
+|   ├── If user has sufficient balance
+|   │   └── Calls deposit on target farm plugin
+|   │   └── is CB configured
+|   │   │   └── Calls recordInflow on CB
+|   │   └── Emits target farm's deposit event
+|   └── Emits 4626 deposit event
+
+mint()
+├── If target farm plugin is not set
+│   └── revert
+├── If target farm plugin is set
+│   ├── If user has insufficient balance
+│   │   └── revert
+│   ├── If user has sufficient balance
+│   │   └── Calls deposit on target farm plugin with assets equal to previewMint
+│   │   └── is CB configured
+|   │   │   └── Calls recordInflow on CB
+│   │   └── Emits target farm's deposit event
+|   └── Emits 4626 mint event
+
+withdraw()
+├── If target farm plugin is not set
+│   └── revert
+├── If target farm plugin is set
+│   ├── If assetOwner has insufficient balance or caller has insufficient allowance
+│   │   └── revert
+│   ├── If assetOwner has sufficient balance and caller has sufficient allowance
+│   │   ├── Calls withdraw on target farm plugin with assets equal to previewWithdraw
+│   │   ├── Emits target farm's withdraw event
+    │   ├── Burns extra shares due to exit fee(from previewWithdraw)
+    │   ├── Applies exit fee
+    │   │   ├── Transfers fee to treasury
+    │   │   └── Emits FeeCollected event
+    │   ├── Emits 4626 withdraw event
+    │   ├── is CB configured
+    │   │   └── Calls onTokenOutflow on CB
+    │   │   │   └── if token limiter is not initialized
+    │   │   │   │   └── Transfers remaining asset to receiver
+    │   │   │   └── if token limiter is  initialized
+    │   │   │   │   └── if limit is hit
+    │   │   │   │   │   └── revert
+    │   │   │   └── if limit is not hit
+    │   │   │   │   └── Transfers remaining asset to receiver
+
+
+redeem()
+├── If target farm plugin is not set
+│   └── revert
+├── If target farm plugin is set
+│   ├── If assetOwner has insufficient balance or caller has insufficient allowance
+│   │   └── revert
+│   ├── If assetOwner has sufficient balance and caller has sufficient allowance
+│   │   └── Calls withdraw on target farm plugin with assets equal to previewRedeem
+│   │   └── Emits target farm's withdraw event
+│   │   ├── Burns extra shares due to exit fee(from previewRedeem)
+│   │   ├── Applies exit fee
+│   │   │   ├── Transfers fee to treasury
+│   │   │   └── Emits FeeCollected event
+│   │   └── Emits 4626 redeem event
+
+
+harvestRewards()
+├── Harvest Kodiak rewards (false)
+│   └── No call to KodiakRewards contract
+├── Harvest Kodiak rewards (true)
+│   └── Calls harvestAllRewards on KodiakRewards contract
+│   └── Harvest previous Kodiak reward tokens array (empty)
+│   │   └── no call to kodiakRewards.harvestRewards
+│   ├── Harvest previous Kodiak reward tokens array (not empty)
+│       ├── Invalid previous reward token
+│       ├── valid previous reward token
+│           ├── no pending rewards
+│           │   └── nothing to harvest
+│           ├── has pending rewards
+│           │   └── harvests rewards (Increases vault's reward token balance)
+├── Harvest Beradrome rewards (if specified)
+│   ├── Calls getReward on Beradrome Gauge
+│   └── If allocateXKDKToKodiakRewards is false
+│       └── xKDK vault balance is increased by pending rewards(pending rewards = farm.earned(vault, xKDK))
+│   └── If allocateXKDKToKodiakRewards is true
+│       ├── Approves xKDK usage for KodiakRewards
+│       └── Allocates xKDK to KodiakRewards
+│       └── Vault's xKDK balance is unchanged.
+└── Emits RewardsHarvested event
+
+compound()
+├── not authorized to call compound
+│   └── revert
+└── authorized to call compound
+    ├── Swap data length mismatch
+    │   └── revert
+    └── Swap data length match
+        ├── Approves tokens for Zapper contract
+        ├── Calls zapInWithMultipleTokens on Zapper contract
+        ├── Checks for minimum island tokens minted
+        │   └── revert if below minimum
+        ├── Deposits minted tokens into farm
+        └── Emits VaultCompounded event
+// admin functions
+
+setExitFeeBasisPoints()
+├── not authorized to call setExitFeeBasisPoints
+│   └── revert
+└── authorized to call setExitFeeBasisPoints
+    └── updates exitFeeBasisPoints
+
+setTreasury()
+├── not authorized to call setTreasury
+│   └── revert
+└── authorized to call setTreasury
+    ├── is zero address
+    │   └── revert
+    ├── is not zero address
+    └── updates treasury
+
+setZapper()
+├── not authorized to call setZapper
+│   └── revert
+└── authorized to call setZapper
+    ├── is zero address
+    │   └── revert
+    ├── is not zero address
+    └── updates zapper
+setStrategyManager()
+├── not authorized to call setStrategyManager
+│   └── revert
+└── authorized to call setStrategyManager
+    ├── sets strategy manager to true
+    └── sets strategy manager to false
+
+setBeradromeFarmPlugin()
+├── not authorized to call setBeradromeFarmPlugin
+│   └── revert
+└── authorized to call setBeradromeFarmPlugin
+    ├── is zero address
+    │   └── revert
+    ├── new plugin asset doesn't match vault asset
+    │   └── revert
+    └── valid new plugin
+        └── updates beradromeFarmPlugin
+
+setBeradromeFarmRewardsGauge()
+├── not authorized to call setBeradromeFarmRewardsGauge
+│   └── revert
+└── authorized to call setBeradromeFarmRewardsGauge
+    └── updates beradromeFarmRewardsGauge
+
+setXKdk()
+├── not authorized to call setXKdk
+│   └── revert
+└── authorized to call setXKdk
+    ├── is zero address
+    │   └── revert
+    └── valid new xKdk address
+        └── updates xKdk
+
+setAllocationFlagxKDK()
+├── not authorized to call setAllocationFlagxKDK
+│   └── revert
+└── authorized to call setAllocationFlagxKDK
+    └── updates allocateXKDKToKodiakRewards

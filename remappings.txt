@@ -1,0 +1,8 @@
+@pythnetwork/entropy-sdk-solidity/=node_modules/@pythnetwork/entropy-sdk-solidity
+@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+surl/=lib/surl/src
+@kodiak-finance/=node_modules/@kodiak-finance/
+contracts/=src/contracts
+interfaces/=src/interfaces
+src/=src
